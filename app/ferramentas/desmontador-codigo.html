@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Laboratório: mudar e desmontar</title>
+<style>
+:root{color-scheme:light dark;--bg:light-dark(#f6f7f9,#11161c);--card:light-dark(#fff,#1a222b);--ink:light-dark(#15202b,#e3eaf1);--mut:light-dark(#5b6875,#9aabba);--acc:light-dark(#0b6e6e,#5fd1c4);--lin:light-dark(#d8dde2,#2c3a47);--tag:light-dark(#e4f1ef,#16302f);--av:light-dark(#9a4a08,#ffb37a)}
+*{box-sizing:border-box;min-width:0}html,body{overscroll-behavior:none}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:14px}
+h1{font-size:25px;margin:0 0 4px}h2{font-size:19px;margin:0 0 8px}h3{font-size:16px;margin:12px 0 4px}
+.mut{color:var(--mut)}small{color:var(--mut)}
+.cx{background:var(--card);border:1px solid var(--lin);border-radius:12px;padding:14px;margin:12px 0}
+button,label.bt,select{min-height:44px;padding:0 13px;border-radius:8px;border:1px solid var(--acc);background:transparent;color:var(--acc);font:600 14px system-ui;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+select{color:var(--ink);background:var(--card);border-color:var(--lin);max-width:100%}
+button.forte,label.bt.forte{background:var(--acc);color:var(--bg)}
+.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+textarea{width:100%;min-height:110px;font:13px ui-monospace,monospace;border:1px solid var(--lin);border-radius:8px;padding:8px;background:var(--bg);color:var(--ink)}
+iframe{width:100%;height:420px;border:1px solid var(--lin);border-radius:10px;background:#fff}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.45 ui-monospace,monospace;background:var(--bg);border:1px solid var(--lin);border-radius:8px;padding:8px;max-height:260px;overflow:auto;margin:4px 0}
+.tag{display:inline-block;font-size:12px;border-radius:20px;padding:1px 8px;background:var(--tag);color:var(--acc);margin:2px 4px 2px 0}
+.aviso{border-left:4px solid var(--av);padding:6px 10px;border-radius:6px;background:color-mix(in srgb,var(--av) 10%,transparent)}
+.fn{border-top:1px solid var(--lin);padding:6px 0;font-size:14px}.fn b{font-family:ui-monospace,monospace}
+.grade-m{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}.grade-m label{display:flex;flex-direction:column;font-size:14px;gap:2px}.grade-m input[type=color]{width:100%;height:40px;border:1px solid var(--lin);border-radius:8px;background:none}.grade-m output{font-size:12px;color:var(--mut)}
+.abas{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.abas button[aria-pressed=true]{background:var(--acc);color:var(--bg)}
+</style></head><body>
+<div class="wrap">
+  <h1>🧪 Laboratório: mudar e desmontar</h1>
+  <p class="mut">Abra seus códigos (.html). <b>Toque numa parte da tela e mude na hora</b>: cor, tamanho, ângulo, abrir e fechar, esconder, duplicar. Depois baixe o código mudado. Ou separe a <b>peça inteira</b>, com o HTML dela, <b>o CSS que dá a cor e o tamanho</b>, e <b>as funções que os botões chamam, e as que essas funções chamam</b>. Junte peças de vários códigos na <b>bancada</b> e baixe um projeto modular. Não usa IA e não muda os seus arquivos.</p>
+
+  <div class="cx">
+    <div class="linha">
+      <label class="bt forte">📂 Abrir códigos (.html)<input id="arqs" type="file" accept=".html,.htm,.txt" multiple hidden></label>
+      <select id="lista" aria-label="Código aberto"><option value="">— nenhum código aberto —</option></select>
+    </div>
+    <details style="margin-top:8px"><summary class="mut">ou colar um código</summary><textarea id="colar" placeholder="Cole aqui um HTML inteiro…"></textarea><div class="linha" style="margin-top:6px"><button id="usarColado">Usar o código colado</button></div></details>
+  </div>
+
+  <div id="area" hidden>
+    <div class="abas" role="group" aria-label="O que fazer">
+      <button data-aba="pegar" aria-pressed="true">👆 Tocar, mudar e pegar</button>
+      <button data-aba="mapa" aria-pressed="false">🗺️ Mapa do código</button>
+      <button data-aba="modular" aria-pressed="false">📦 Deixar modular</button>
+    </div>
+
+    <div class="cx" data-painel="pegar">
+      <h2>👆 Toque na parte que você quer</h2>
+      <p class="mut">A tela abaixo é o seu código <b>parado</b> (sem rodar), para dar para escolher. Toque num botão, num quadro, num formulário… A parte tocada fica marcada.</p>
+      <div class="linha" style="margin-bottom:6px"><button id="subir">⬆ Pegar a parte de fora (maior)</button><small id="qual">nada escolhido</small></div>
+      <iframe id="vista" sandbox="allow-scripts" title="Prévia do código"></iframe>
+      <div id="mudar" hidden class="cx" style="margin:10px 0">
+        <h3 style="margin-top:0">🎨 Mudar esta parte</h3>
+        <div class="grade-m">
+          <label>Cor do fundo <input type="color" data-m="background-color" value="#ffffff"></label>
+          <label>Cor da letra <input type="color" data-m="color" value="#000000"></label>
+          <label>Tamanho da letra <input type="range" data-m="font-size" min="8" max="72" value="16" data-u="px"><output></output></label>
+          <label>Largura <input type="range" data-m="width" min="5" max="100" value="100" data-u="%"><output></output></label>
+          <label>Altura <input type="range" data-m="min-height" min="0" max="800" value="0" data-u="px"><output></output></label>
+          <label>Girar (ângulo) <input type="range" data-m="rotate" min="-180" max="180" value="0" data-u="deg"><output></output></label>
+          <label>Canto redondo <input type="range" data-m="border-radius" min="0" max="60" value="0" data-u="px"><output></output></label>
+          <label>Espaço por dentro <input type="range" data-m="padding" min="0" max="60" value="0" data-u="px"><output></output></label>
+          <label>Transparência <input type="range" data-m="opacity" min="10" max="100" value="100" data-u="%"><output></output></label>
+        </div>
+        <div class="linha" style="margin-top:8px">
+          <button id="mSanfona">↕ Virar "abre e fecha"</button>
+          <button id="mEsconder">🙈 Esconder / mostrar</button>
+          <button id="mDuplicar">⧉ Duplicar</button>
+          <button id="mTirar">🗑 Tirar esta parte</button>
+          <button id="mTexto">✏️ Trocar o texto</button>
+        </div>
+        <div class="linha" style="margin-top:8px">
+          <button id="mDesfazer">↩ Desfazer</button>
+          <button class="forte" id="mBaixar">⬇ Baixar o código mudado</button>
+          <small id="mInfo"></small>
+        </div>
+      </div>
+      <div id="peca" hidden>
+        <h3>🧩 A peça (para levar para outro código)</h3>
+        <div id="motivos"></div>
+        <div class="linha" style="margin:6px 0"><button class="forte" id="pBancada">➕ Pôr na bancada</button><button id="pBaixar">⬇ Baixar a peça (.html que abre sozinha)</button><button id="pCopiar">📋 Copiar tudo</button></div>
+        <h3>HTML <small id="nHtml"></small></h3><pre id="oHtml"></pre>
+        <h3>CSS <small id="nCss"></small></h3><pre id="oCss"></pre>
+        <h3>Funções (JavaScript) <small id="nJs"></small></h3><pre id="oJs"></pre>
+      </div>
+    </div>
+
+    <div class="cx" data-painel="mapa" hidden>
+      <h2>🗺️ O que tem dentro deste código</h2>
+      <div id="mapa"></div>
+    </div>
+
+    <div class="cx" data-painel="modular" hidden>
+      <h2>📦 Deixar este código modular</h2>
+      <p class="mut">Separa o arquivo inteiro em <code>index.html</code> + <code>css/</code> + <code>js/</code>, <b>na mesma ordem</b> (continua funcionando igual). Bom para depois mexer por partes.</p>
+      <button class="forte" id="modZip">⬇ Baixar o projeto modular (.zip)</button>
+    </div>
+  </div>
+
+  <div class="cx">
+    <h2>🧰 Bancada <small id="nBancada">(vazia)</small></h2>
+    <p class="mut">Peças de códigos diferentes, juntas. Baixe como um projeto novo: cada peça vira o seu próprio arquivo CSS e JS.</p>
+    <div id="bancada"></div>
+    <div class="linha" style="margin-top:8px"><button class="forte" id="bZip">⬇ Montar projeto com a bancada (.zip)</button><button id="bLimpar">🧽 Esvaziar a bancada</button></div>
+    <div id="bAviso"></div>
+  </div>
+</div>
+
+<script>
+{
+const $ = (i) => document.getElementById(i);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const codigos = []; let atual = null, escolhido = null, pecaAtual = null; const bancada = [];
+
+function texto(buf) { let b = new Uint8Array(buf); if (b[0] === 0xef && b[1] === 0xbb && b[2] === 0xbf) b = b.subarray(3); try { return new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (e) { return new TextDecoder('windows-1252').decode(b); } }
+
+// ───── separar o JavaScript em "frases" do nível de fora (funções, variáveis, ligações) ─────
+function frasesJS(src) {
+  let s = src.trim();
+  // desembrulha IIFE / bloco que envolve tudo: (function(){ … })();  { … }  (() => { … })();
+  for (let k = 0; k < 2; k++) {
+    const m = s.match(/^(?:['"]use strict['"];?\s*)?(?:\(\s*(?:async\s*)?(?:function\s*\w*\s*\([^)]*\)|\([^)]*\)\s*=>|\w+\s*=>)\s*\{|\{)/);
+    if (!m) break;
+    const fim = fecha(s, m[0].length - 1); if (fim < 0) break;
+    const resto = s.slice(fim + 1).replace(/^\s*\)?\s*(\([^)]*\))?\s*\)?\s*;?\s*$/, '');
+    if (resto.trim()) break;
+    s = s.slice(m[0].length, fim);
+  }
+  const out = []; let i = 0, ini = 0, prof = 0;
+  const n = s.length;
+  while (i < n) {
+    const c = s[i];
+    if (c === '/' && s[i + 1] === '/') { i = s.indexOf('\n', i); if (i < 0) i = n; continue; }
+    if (c === '/' && s[i + 1] === '*') { i = s.indexOf('*/', i + 2); i = i < 0 ? n : i + 2; continue; }
+    if (c === '"' || c === "'" || c === '`') { i = pulaTexto(s, i); continue; }
+    if (c === '{' || c === '(' || c === '[') prof++;
+    else if (c === '}' || c === ')' || c === ']') { prof--; if (prof === 0 && c === '}') { let j = i + 1; while (j < n && (s[j] === ' ' || s[j] === '\t')) j++; if (j >= n || s[j] === '\n' || s[j] === '\r') { let k = j; while (k < n && /\s/.test(s[k])) k++; if (k >= n || !/[.,)\]?:+\-*\/&|=]/.test(s[k])) { const t = s.slice(ini, i + 1).trim(); if (t) out.push(t); ini = i + 1; } } } }
+    else if (c === ';' && prof === 0) { const t = s.slice(ini, i + 1).trim(); if (t && t !== ';') out.push(t); ini = i + 1; }
+    i++;
+  }
+  const t = s.slice(ini).trim(); if (t) out.push(t);
+  return out.map((f) => {
+    let m = f.match(/^(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)/); if (m) return { tipo: 'funcao', nomes: [m[1]], txt: f };
+    m = f.match(/^class\s+([A-Za-z_$][\w$]*)/); if (m) return { tipo: 'funcao', nomes: [m[1]], txt: f };
+    m = f.match(/^(?:const|let|var)\s+([\s\S]*)/);
+    if (m) { const nomes = []; const cab = m[1].split('=')[0]; const d = cab.match(/^\s*\{([^}]*)\}/) || cab.match(/^\s*\[([^\]]*)\]/); if (d) d[1].split(',').forEach((x) => { const k = x.split(':').pop().trim().split(/\s/)[0]; if (/^[A-Za-z_$][\w$]*$/.test(k)) nomes.push(k); }); else { const k = cab.trim().match(/^[A-Za-z_$][\w$]*/); if (k) nomes.push(k[0]); }
+      return { tipo: /=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)/.test(f) ? 'funcao' : 'variavel', nomes, txt: f }; }
+    m = f.match(/^(?:window\.)?([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>)/); if (m) return { tipo: 'funcao', nomes: [m[1]], txt: f };
+    return { tipo: 'ligacao', nomes: [], txt: f };
+  });
+}
+function pulaTexto(s, i) { const q = s[i]; i++; while (i < s.length) { if (s[i] === '\\') { i += 2; continue; } if (s[i] === q) return i + 1; if (q === '`' && s[i] === '$' && s[i + 1] === '{') { const f = fecha(s, i + 1); i = f < 0 ? s.length : f + 1; continue; } i++; } return i; }
+function fecha(s, i) { let p = 0; for (let k = i; k < s.length; k++) { const c = s[k]; if (c === '"' || c === "'" || c === '`') { k = pulaTexto(s, k) - 1; continue; } if (c === '/' && s[k + 1] === '/') { k = s.indexOf('\n', k); if (k < 0) return -1; continue; } if (c === '/' && s[k + 1] === '*') { k = s.indexOf('*/', k + 2); if (k < 0) return -1; k++; continue; } if (c === '{' || c === '(' || c === '[') p++; else if (c === '}' || c === ')' || c === ']') { p--; if (p === 0) return k; } } return -1; }
+const usaNome = (txt, nome) => new RegExp('(^|[^\\w$.])' + nome.replace(/\$/g, '\\$') + '(?![\\w$])').test(txt);
+
+// ───── abrir um código ─────
+function analisar(nome, html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const estilos = [...doc.querySelectorAll('style')].map((s) => s.textContent);
+  const scripts = [...doc.querySelectorAll('script')].filter((s) => !s.src && !/json|template|text\/plain/i.test(s.type || '')).map((s) => ({ txt: s.textContent, modulo: s.type === 'module' }));
+  const externos = [...doc.querySelectorAll('script[src],link[rel=stylesheet]')].map((x) => x.outerHTML);
+  const frases = []; scripts.forEach((s, k) => { try { frasesJS(s.txt).forEach((f) => frases.push(Object.assign(f, { script: k }))); } catch (e) { frases.push({ tipo: 'ligacao', nomes: [], txt: s.txt, script: k }); } });
+  const regras = [];
+  for (const css of estilos) { try { const f = new CSSStyleSheet(); f.replaceSync(css); for (const r of f.cssRules) regras.push(r); } catch (e) {} }
+  return { nome, html, doc, estilos, scripts, externos, frases, regras };
+}
+async function abrirArquivos(fs) {
+  for (const f of fs) { try { codigos.push(analisar(f.name, texto(await f.arrayBuffer()))); } catch (e) { alert(f.name + ': ' + e.message); } }
+  pintarLista(); escolherCodigo(codigos.length - 1);
+}
+$('arqs').onchange = (e) => { abrirArquivos([...e.target.files]); e.target.value = ''; };
+$('usarColado').onclick = () => { const t = $('colar').value.trim(); if (!t) return; codigos.push(analisar('colado-' + (codigos.length + 1) + '.html', t)); pintarLista(); escolherCodigo(codigos.length - 1); };
+function pintarLista() { $('lista').innerHTML = codigos.map((c, i) => '<option value="' + i + '">' + esc(c.nome) + '</option>').join(''); }
+$('lista').onchange = () => escolherCodigo(+$('lista').value);
+
+// a prévia "parada": sem os scripts do código, com um script só para escolher a parte
+const SELETOR = `<script>(function(){var m=null;function cam(el){var p=[];while(el&&el!==document.body&&el.parentElement){var i=Array.prototype.indexOf.call(el.parentElement.children,el);p.unshift(i);el=el.parentElement}return p}
+document.addEventListener('mouseover',function(e){if(m)m.style.outline=m.__o||'';m=e.target;m.__o=m.style.outline;m.style.outline='2px dashed #0b6e6e'},true);
+document.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();parent.postMessage({desmontador:cam(e.target)},'*')},true);
+window.addEventListener('message',function(e){if(e.data&&e.data.marcar){var el=document.body;e.data.marcar.forEach(function(i){if(el)el=el.children[i]});document.querySelectorAll('[data-dm]').forEach(function(x){x.style.boxShadow='';x.removeAttribute('data-dm')});if(el){el.setAttribute('data-dm','1');el.style.boxShadow='0 0 0 3px #e11d48 inset';el.scrollIntoView({block:'center'})}}});})();<\/script>`;
+function escolherCodigo(i) {
+  atual = codigos[i]; if (!atual) return; $('lista').value = i; $('area').hidden = false; escolhido = null; $('peca').hidden = true; $('qual').textContent = 'nada escolhido';
+  historico.length = 0; $('mudar').hidden = true;
+  renderVista(); pintarMapa();
+}
+window.addEventListener('message', (e) => { if (e.source === $('vista').contentWindow && e.data && e.data.desmontador) { escolhido = e.data.desmontador; extrair(); } });
+$('subir').onclick = () => { if (escolhido && escolhido.length > 1) { escolhido = escolhido.slice(0, -1); extrair(); } };
+
+function renderVista(depois) {
+  const d = atual.doc.cloneNode(true); d.querySelectorAll('script').forEach((s) => s.remove());
+  d.querySelectorAll('*').forEach((el) => { for (const a of [...el.attributes]) if (/^on/i.test(a.name)) el.removeAttribute(a.name); });
+  d.querySelectorAll('details').forEach((x) => x.setAttribute('open', ''));
+  if (depois) $('vista').addEventListener('load', depois, { once: true });
+  $('vista').srcdoc = '<!doctype html>' + d.documentElement.outerHTML.replace('</body>', SELETOR + '</body>');
+}
+// ───── 🎨 mudar na hora ─────
+const historico = [];
+function guardarPasso() { historico.push(atual.doc.documentElement.outerHTML); if (historico.length > 40) historico.shift(); }
+function mudou(msg) { $('mInfo').textContent = msg || '✔ mudado'; renderVista(() => escolhido && $('vista').contentWindow.postMessage({ marcar: escolhido }, '*')); }
+const elAtual = () => escolhido && elDoCaminho(atual.doc, escolhido);
+function lerValores(el) {
+  document.querySelectorAll('[data-m]').forEach((i) => {
+    const prop = i.dataset.m, v = el.style.getPropertyValue(prop);
+    if (i.type === 'color') { const m = (v || '').match(/^#[0-9a-f]{6}$/i); i.value = m ? v : (prop === 'color' ? '#000000' : '#ffffff'); }
+    else { const n = parseFloat(v); i.value = isNaN(n) ? i.defaultValue : (i.dataset.u === '%' && prop === 'opacity' ? n * 100 : n); i.nextElementSibling.textContent = isNaN(n) ? '' : i.value + i.dataset.u; }
+  });
+}
+let tempo = null;
+document.querySelectorAll('[data-m]').forEach((i) => i.addEventListener('input', () => {
+  const el = elAtual(); if (!el) return;
+  if (!i.dataset.mexendo) { guardarPasso(); i.dataset.mexendo = '1'; }
+  let v = i.value + (i.type === 'color' ? '' : i.dataset.u);
+  if (i.dataset.m === 'opacity') v = String(i.value / 100);
+  if (i.dataset.m === 'width' && +i.value >= 100) el.style.removeProperty('width'); else el.style.setProperty(i.dataset.m, v);
+  if (i.dataset.m === 'rotate' && /^(A|SPAN|B|I|STRONG|EM|LABEL|IMG|SMALL)$/.test(el.tagName) && !el.style.display) el.style.display = 'inline-block';
+  if (i.nextElementSibling) i.nextElementSibling.textContent = i.type === 'color' ? '' : i.value + i.dataset.u;
+  clearTimeout(tempo); tempo = setTimeout(() => { delete i.dataset.mexendo; mudou(); }, 250);
+}));
+$('mEsconder').onclick = () => { const el = elAtual(); if (!el) return; guardarPasso(); if (el.style.display === 'none') { el.style.removeProperty('display'); mudou('👁 aparece de novo'); } else { el.style.display = 'none'; mudou('🙈 escondido (no código baixado ele fica escondido)'); } };
+$('mDuplicar').onclick = () => { const el = elAtual(); if (!el) return; guardarPasso(); const c = el.cloneNode(true); c.removeAttribute('id'); c.querySelectorAll('[id]').forEach((x) => x.id = x.id + '-2'); el.after(c); mudou('⧉ duplicado (logo abaixo)'); };
+$('mTirar').onclick = () => { const el = elAtual(); if (!el || !confirm('Tirar esta parte do código? (dá para desfazer)')) return; guardarPasso(); el.remove(); escolhido = null; $('mudar').hidden = true; $('peca').hidden = true; mudou('🗑 tirado'); };
+$('mTexto').onclick = () => { const el = elAtual(); if (!el) return; const t = prompt('Texto novo para esta parte:', el.textContent.trim().slice(0, 300)); if (t == null) return; guardarPasso(); if (el.children.length) { const alvo = [...el.querySelectorAll('*')].find((x) => !x.children.length && x.textContent.trim()) || el; alvo.textContent = t; } else el.textContent = t; mudou('✏️ texto trocado'); };
+$('mSanfona').onclick = () => {
+  const el = elAtual(); if (!el) return; guardarPasso();
+  if (el.tagName === 'DETAILS') { const frag = atual.doc.createDocumentFragment(); [...el.childNodes].forEach((n) => { if (n.nodeName !== 'SUMMARY') frag.appendChild(n); }); el.replaceWith(frag); escolhido = null; $('mudar').hidden = true; mudou('↕ voltou a ser normal'); return; }
+  const titulo = prompt('Título que aparece quando estiver fechado:', (el.querySelector('h1,h2,h3,h4,b,strong,legend') || el).textContent.trim().slice(0, 60) || 'Abrir');
+  if (titulo == null) { historico.pop(); return; }
+  const d = atual.doc.createElement('details'), sm = atual.doc.createElement('summary'); sm.textContent = titulo; sm.style.cssText = 'cursor:pointer;font-weight:600;padding:8px'; d.append(sm); el.replaceWith(d); d.append(el); mudou('↕ agora abre e fecha (toque no título)');
+};
+$('mDesfazer').onclick = () => { const h = historico.pop(); if (!h) { $('mInfo').textContent = 'nada para desfazer'; return; } const nd = new DOMParser().parseFromString('<!doctype html>' + h, 'text/html'); atual.doc = nd; const el = elAtual(); if (!el) { escolhido = null; $('mudar').hidden = true; } else lerValores(el); mudou('↩ desfeito'); };
+$('mBaixar').onclick = () => { const html = '<!doctype html>\n' + atual.doc.documentElement.outerHTML; baixar(new Blob([html], { type: 'text/html;charset=utf-8' }), atual.nome.replace(/(\.html?)?$/i, '') + '-mudado.html'); $('mInfo').textContent = '⬇ baixado (os botões e funções continuam iguais)'; };
+
+function elDoCaminho(doc, cam) { let el = doc.body; for (const i of cam) { if (!el) return null; el = el.children[i]; } return el; }
+function descreve(el) { return '<' + el.tagName.toLowerCase() + (el.id ? ' id="' + el.id + '"' : '') + (el.classList.length ? ' class="' + [...el.classList].slice(0, 3).join(' ') + '"' : '') + '>'; }
+
+// ───── a mágica: o que a peça precisa ─────
+function seletorTestavel(sel) { return sel.replace(/::?[\w-]+(\([^)]*\))?/g, (m) => (/^:(not|is|where|has)\(/.test(m) ? m : '')).trim() || '*'; }
+function cssDaPeca(cod, el) {
+  const usados = [], motivos = new Set(), animacoes = new Set();
+  const testa = (sel) => sel.split(',').some((s) => { const t = seletorTestavel(s.trim()); if (/^(:root|html|body|\*)$/.test(t)) return true; try { return el.matches(t) || !!el.querySelector(t) || !!el.closest(t) && /\s|>/.test(t) === false && false; } catch (e) { return false; } });
+  const anda = (lista, embrulho) => {
+    for (const r of lista) {
+      if (r.type === 1) { if (testa(r.selectorText)) { usados.push(embrulho ? embrulho(r.cssText) : r.cssText); const a = (r.style.animationName || r.style.animation || ''); a.split(/[\s,]+/).forEach((x) => x && animacoes.add(x)); } }
+      else if (r.type === 4) { const antes = usados.length; anda(r.cssRules, (t) => '@media ' + r.conditionText + ' { ' + t + ' }'); if (usados.length > antes) motivos.add('regras de tela (@media)'); }
+      else if (r.type === 5) usados.push(r.cssText); // @font-face
+    }
+  };
+  anda(cod.regras);
+  for (const r of cod.regras) if (r.type === 7 && animacoes.has(r.name)) { usados.push(r.cssText); motivos.add('animação ' + r.name); }
+  return { css: usados.join('\n\n'), n: usados.length, motivos: [...motivos] };
+}
+function jsDaPeca(cod, el) {
+  const htmlP = el.outerHTML, ids = new Set(), classes = new Set(), handlers = [];
+  [el, ...el.querySelectorAll('*')].forEach((x) => { if (x.id) ids.add(x.id); x.classList.forEach((c) => classes.add(c)); for (const a of x.attributes) if (/^on/i.test(a.name)) handlers.push(a.value); });
+  const porNome = new Map(); cod.frases.forEach((f) => f.nomes.forEach((n) => porNome.set(n, f)));
+  const dentro = new Set(), porque = new Map();
+  const add = (f, motivo) => { if (!dentro.has(f)) { dentro.add(f); porque.set(f, motivo); } };
+  // 1) os botões da peça (onclick="…")
+  handlers.forEach((h) => porNome.forEach((f, n) => { if (usaNome(h, n)) add(f, 'o botão da peça chama ' + n + '()'); }));
+  // 2) quem mexe nas partes da peça (#id, .classe)
+  const mexe = (txt) => [...ids].find((id) => new RegExp('["\'`#]' + id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '["\'`\\s.\\[:)]').test(txt)) || [...classes].find((c) => c.length > 2 && new RegExp('["\'`]\\.?' + c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '["\'`\\s.\\[:]').test(txt));
+  cod.frases.forEach((f) => { const k = mexe(f.txt); if (k) add(f, (f.tipo === 'ligacao' ? 'liga a peça (' : 'mexe na peça (') + k + ')'); });
+  // 3) o que essas funções chamam (e assim por diante)
+  let mudou = true;
+  while (mudou) { mudou = false; for (const f of [...dentro]) porNome.forEach((g, n) => { if (!dentro.has(g) && g !== f && usaNome(f.txt, n)) { add(g, (f.nomes[0] || 'a ligação') + ' usa ' + n); mudou = true; } }); }
+  const ordem = cod.frases.filter((f) => dentro.has(f));
+  return { js: ordem.map((f) => '// ' + porque.get(f) + '\n' + f.txt).join('\n\n'), n: ordem.length, nomes: ordem.flatMap((f) => f.nomes), handlers: handlers.length, ids: ids.size };
+}
+function extrair() {
+  const el = elDoCaminho(atual.doc, escolhido); if (!el) return;
+  $('vista').contentWindow.postMessage({ marcar: escolhido }, '*');
+  const c = cssDaPeca(atual, el), j = jsDaPeca(atual, el);
+  pecaAtual = { origem: atual.nome, nome: (el.id || [...el.classList][0] || el.tagName.toLowerCase()) + '', html: el.outerHTML, css: c.css, js: j.js, nomes: j.nomes, externos: atual.externos };
+  $('qual').textContent = 'escolhido: ' + descreve(el);
+  $('motivos').innerHTML = '<span class="tag">' + c.n + ' regras de CSS</span><span class="tag">' + j.n + ' pedaços de JS</span><span class="tag">' + j.handlers + ' botões/ações</span><span class="tag">' + j.ids + ' partes com nome (#id)</span>' + c.motivos.map((m) => '<span class="tag">' + esc(m) + '</span>').join('') +
+    (atual.externos.length ? '<p class="aviso">Este código usa ' + atual.externos.length + ' arquivo(s) de fora (bibliotecas). Eles vão junto na peça.</p>' : '');
+  $('oHtml').textContent = pecaAtual.html; $('nHtml').textContent = '(' + pecaAtual.html.length + ' letras)';
+  $('oCss').textContent = c.css || '(nenhum CSS próprio)'; $('nCss').textContent = '(' + c.n + ' regras)';
+  $('oJs').textContent = j.js || '(nenhuma função — é só visual)'; $('nJs').textContent = '(' + j.n + ')';
+  $('peca').hidden = false; $('mudar').hidden = false; lerValores(el);
+}
+const paginaDaPeca = (p) => '<!doctype html>\n<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>' + esc(p.nome) + '</title>\n' + (p.externos || []).join('\n') + '\n<style>\nhtml,body{overscroll-behavior:none}\n' + p.css + '\n</style></head><body>\n' + p.html + '\n<script>\n' + p.js + '\n<\/script>\n</body></html>\n';
+function baixar(blob, nome) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
+$('pBaixar').onclick = () => pecaAtual && baixar(new Blob([paginaDaPeca(pecaAtual)], { type: 'text/html;charset=utf-8' }), 'peca-' + pecaAtual.nome + '.html');
+$('pCopiar').onclick = async () => { if (!pecaAtual) return; try { await navigator.clipboard.writeText(paginaDaPeca(pecaAtual)); $('qual').textContent = '📋 copiado'; } catch (e) {} };
+$('pBancada').onclick = () => { if (!pecaAtual) return; bancada.push(Object.assign({}, pecaAtual)); pintarBancada(); $('qual').textContent = '➕ na bancada'; };
+
+// ───── mapa ─────
+function pintarMapa() {
+  const c = atual, fs = c.frases.filter((f) => f.tipo === 'funcao');
+  const ids = [...c.doc.querySelectorAll('[id]')].map((x) => x.id);
+  const linhas = fs.map((f) => {
+    const chama = [...new Set(c.frases.filter((g) => g !== f && g.tipo === 'funcao').flatMap((g) => g.nomes).filter((n) => usaNome(f.txt, n)))];
+    const mexe = ids.filter((id) => new RegExp('["\'`#]' + id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '["\'`\\s.\\[:)]').test(f.txt));
+    const botoes = [...c.doc.querySelectorAll('*')].filter((el) => [...el.attributes].some((a) => /^on/i.test(a.name) && f.nomes.some((n) => usaNome(a.value, n)))).length;
+    return '<div class="fn"><b>' + esc(f.nomes.join(', ')) + '</b> <small>(' + f.txt.split('\n').length + ' linhas)</small>' +
+      (botoes ? '<br>👆 chamada por ' + botoes + ' botão(ões)' : '') + (chama.length ? '<br>➡ chama: ' + esc(chama.join(', ')) : '') + (mexe.length ? '<br>🎯 mexe em: ' + esc(mexe.map((x) => '#' + x).join(', ')) : '') + '</div>';
+  });
+  $('mapa').innerHTML = '<p><span class="tag">' + c.regras.length + ' regras de CSS</span><span class="tag">' + c.scripts.length + ' blocos de script</span><span class="tag">' + fs.length + ' funções</span><span class="tag">' + c.frases.filter((f) => f.tipo === 'ligacao').length + ' ligações soltas</span><span class="tag">' + ids.length + ' partes com nome (#id)</span><span class="tag">' + c.externos.length + ' arquivos de fora</span></p>' +
+    (linhas.join('') || '<p class="mut">Nenhuma função encontrada.</p>');
+}
+
+// ───── abas ─────
+document.querySelectorAll('[data-aba]').forEach((b) => b.onclick = () => { document.querySelectorAll('[data-aba]').forEach((x) => x.setAttribute('aria-pressed', x === b)); document.querySelectorAll('[data-painel]').forEach((p) => p.hidden = p.dataset.painel !== b.dataset.aba); });
+
+// ───── zip ─────
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = (u) => { let c = 0xffffffff; for (let i = 0; i < u.length; i++) c = CRC[(c ^ u[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+async function zipar(arqs) {
+  const enc = new TextEncoder(), partes = [], central = []; let off = 0;
+  for (const f of arqs) {
+    const dados = enc.encode(f.dados), nome = enc.encode(f.nome), crc = crc32(dados);
+    const comp = new Uint8Array(await new Response(new Blob([dados]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+    const lh = new DataView(new ArrayBuffer(30)); [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x800, 2], [8, 8, 2], [10, 0, 2], [12, 0x21, 2], [14, crc, 4], [18, comp.length, 4], [22, dados.length, 4], [26, nome.length, 2], [28, 0, 2]].forEach(([o, v, s]) => s === 4 ? lh.setUint32(o, v, true) : lh.setUint16(o, v, true));
+    partes.push(new Uint8Array(lh.buffer), nome, comp);
+    const ch = new DataView(new ArrayBuffer(46)); [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x800, 2], [10, 8, 2], [12, 0, 2], [14, 0x21, 2], [16, crc, 4], [20, comp.length, 4], [24, dados.length, 4], [28, nome.length, 2], [30, 0, 2], [32, 0, 2], [34, 0, 2], [36, 0, 2], [38, 0, 4], [42, off, 4]].forEach(([o, v, s]) => s === 4 ? ch.setUint32(o, v, true) : ch.setUint16(o, v, true));
+    central.push(new Uint8Array(ch.buffer), nome); off += 30 + nome.length + comp.length;
+  }
+  const cdTam = central.reduce((a, b) => a + b.length, 0), fim = new DataView(new ArrayBuffer(22));
+  [[0, 0x06054b50, 4], [8, arqs.length, 2], [10, arqs.length, 2], [12, cdTam, 4], [16, off, 4]].forEach(([o, v, s]) => s === 4 ? fim.setUint32(o, v, true) : fim.setUint16(o, v, true));
+  return new Blob(partes.concat(central, [new Uint8Array(fim.buffer)]), { type: 'application/zip' });
+}
+const nomeArq = (s) => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'peca';
+
+// deixar modular (arquivo inteiro, mesma ordem)
+$('modZip').onclick = async () => {
+  const c = atual; if (!c) return; const d = c.doc.cloneNode(true), arqs = []; let ns = 0, nj = 0;
+  d.querySelectorAll('style').forEach((s) => { ns++; const n = 'css/estilo-' + ns + '.css'; arqs.push({ nome: n, dados: s.textContent.trim() + '\n' }); const l = d.createElement('link'); l.rel = 'stylesheet'; l.href = n; s.replaceWith(l); });
+  d.querySelectorAll('script').forEach((s) => { if (s.src || /json|template|text\/plain/i.test(s.type || '')) return; nj++; const n = 'js/script-' + nj + '.js'; arqs.push({ nome: n, dados: s.textContent.trim() + '\n' }); const t = d.createElement('script'); if (s.type) t.type = s.type; t.src = n; s.replaceWith(t); });
+  const base = nomeArq(c.nome.replace(/\.\w+$/, ''));
+  arqs.unshift({ nome: 'index.html', dados: '<!doctype html>\n' + d.documentElement.outerHTML + '\n' });
+  arqs.push({ nome: 'LEIA-ME.txt', dados: 'Projeto modular feito a partir de "' + c.nome + '" pelo 🧬 Desmontador de Código.\nindex.html chama ' + ns + ' arquivo(s) CSS (pasta css) e ' + nj + ' arquivo(s) JS (pasta js), NA MESMA ORDEM do original.\nAbra o index.html no navegador: tem que funcionar igual ao original.\n' });
+  baixar(await zipar(arqs.map((a) => ({ nome: base + '/' + a.nome, dados: a.dados }))), base + '-modular.zip');
+};
+
+// bancada
+function pintarBancada() {
+  $('nBancada').textContent = bancada.length ? '(' + bancada.length + ' peça' + (bancada.length > 1 ? 's' : '') + ')' : '(vazia)';
+  $('bancada').innerHTML = bancada.map((p, i) => '<div class="fn"><b>' + esc(p.nome) + '</b> <small>de ' + esc(p.origem) + '</small> <button data-tirar="' + i + '" style="min-height:32px">✖ tirar</button></div>').join('');
+  const vistos = new Map(), rep = new Set(); bancada.forEach((p) => p.nomes.forEach((n) => { if (vistos.has(n) && vistos.get(n) !== p.origem) rep.add(n); vistos.set(n, p.origem); }));
+  $('bAviso').innerHTML = rep.size ? '<p class="aviso">⚠ Funções com o mesmo nome em códigos diferentes: <b>' + esc([...rep].join(', ')) + '</b>. No projeto montado, a última peça vence. Se der problema, troque o nome numa delas.</p>' : '';
+}
+$('bancada').onclick = (e) => { const b = e.target.closest('[data-tirar]'); if (b) { bancada.splice(+b.dataset.tirar, 1); pintarBancada(); } };
+$('bLimpar').onclick = () => { bancada.length = 0; pintarBancada(); };
+$('bZip').onclick = async () => {
+  if (!bancada.length) return;
+  const arqs = [], usados = new Set(), externos = new Set();
+  const nomes = bancada.map((p, i) => { let n = String(i + 1).padStart(2, '0') + '-' + nomeArq(p.nome); while (usados.has(n)) n += '-b'; usados.add(n); return n; });
+  bancada.forEach((p, i) => { arqs.push({ nome: 'css/' + nomes[i] + '.css', dados: '/* peça "' + p.nome + '" — de ' + p.origem + ' */\n' + p.css + '\n' }); arqs.push({ nome: 'js/' + nomes[i] + '.js', dados: '// peça "' + p.nome + '" — de ' + p.origem + '\n' + p.js + '\n' }); (p.externos || []).forEach((x) => externos.add(x)); });
+  const idx = '<!doctype html>\n<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>Projeto montado</title>\n' + [...externos].join('\n') + '\n<style>html,body{overscroll-behavior:none}</style>\n' + nomes.map((n) => '<link rel="stylesheet" href="css/' + n + '.css">').join('\n') + '\n</head><body>\n' +
+    bancada.map((p, i) => '<!-- peça ' + (i + 1) + ': "' + esc(p.nome) + '" (de ' + esc(p.origem) + ') -->\n<section data-peca="' + nomes[i] + '">\n' + p.html + '\n</section>').join('\n\n') + '\n\n' + nomes.map((n) => '<script src="js/' + n + '.js"><\/script>').join('\n') + '\n</body></html>\n';
+  arqs.unshift({ nome: 'index.html', dados: idx });
+  arqs.push({ nome: 'LEIA-ME.txt', dados: 'Projeto montado com ' + bancada.length + ' peça(s) no 🧬 Desmontador de Código.\nCada peça tem o seu CSS (pasta css) e o seu JS (pasta js).\nPeças:\n' + bancada.map((p, i) => (i + 1) + '. ' + p.nome + ' — de ' + p.origem).join('\n') + '\n' });
+  baixar(await zipar(arqs.map((a) => ({ nome: 'projeto-montado/' + a.nome, dados: a.dados }))), 'projeto-montado.zip');
+};
+}
+</script>
+</body></html>

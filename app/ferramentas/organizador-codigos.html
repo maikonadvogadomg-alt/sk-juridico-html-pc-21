@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Organizador de Códigos</title>
+<style>
+:root{color-scheme:light dark;--bg:light-dark(#f6f7f9,#11161c);--card:light-dark(#fff,#1a222b);--ink:light-dark(#15202b,#e3eaf1);--mut:light-dark(#5b6875,#9aabba);--acc:light-dark(#0b6e6e,#5fd1c4);--lin:light-dark(#d8dde2,#2c3a47);--tag:light-dark(#e4f1ef,#16302f);--aviso:light-dark(#9a4a08,#ffb37a)}
+*{box-sizing:border-box;min-width:0}html,body{overscroll-behavior:none}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:16px}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:18px 0 8px}
+.mut{color:var(--mut)}small{color:var(--mut)}
+.cx{background:var(--card);border:1px solid var(--lin);border-radius:12px;padding:14px;margin:12px 0}
+button,label.bt{min-height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--acc);background:transparent;color:var(--acc);font:600 14px system-ui;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+button.forte,label.bt.forte{background:var(--acc);color:var(--bg)}
+.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input[type=range]{flex:1 1 160px}
+.bar{height:8px;background:var(--lin);border-radius:8px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+.grupo{border:1px solid var(--lin);border-radius:10px;margin:10px 0;overflow:hidden}
+.grupo>summary{padding:10px 12px;cursor:pointer;font-weight:600;background:var(--tag)}
+.arq{padding:10px 12px;border-top:1px solid var(--lin)}
+.arq b{overflow-wrap:anywhere}
+.tag{display:inline-block;font-size:12px;border-radius:20px;padding:1px 8px;background:var(--tag);color:var(--acc);margin:2px 4px 2px 0}
+.tag.rep{background:color-mix(in srgb,var(--aviso) 18%,transparent);color:var(--aviso)}
+.fn{font:12px ui-monospace,monospace;color:var(--mut);overflow-wrap:anywhere}
+.aviso{border-left:4px solid var(--aviso);padding:6px 10px;border-radius:6px;background:color-mix(in srgb,var(--aviso) 10%,transparent)}
+</style></head><body>
+<div class="wrap">
+  <h1>🗂 Organizador de Códigos</h1>
+  <p class="mut">Jogue aqui vários códigos (HTML, JS, TSX, Python, MD…) ou zips inteiros. Ele diz o que cada um parece fazer, mostra a <b>% de semelhança</b> e junta os parecidos em grupos. <b>Não usa IA e não apaga nada</b>: só organiza para você decidir.</p>
+
+  <div class="cx">
+    <div class="linha">
+      <label class="bt forte">📂 Escolher arquivos ou zips<input id="arqs" type="file" multiple hidden></label>
+      <button id="limpar">🧽 Começar de novo</button>
+    </div>
+    <p style="margin:10px 0 0"><small>Juntar como parecidos a partir de: <b id="limTxt">60%</b></small></p>
+    <div class="linha"><input id="lim" type="range" min="30" max="95" step="5" value="60"></div>
+    <div class="bar"><i id="bar"></i></div>
+    <div id="msg" class="mut">Nenhum arquivo ainda.</div>
+  </div>
+
+  <div id="saida" hidden>
+    <div class="cx">
+      <div id="resumo"></div>
+      <div class="linha" style="margin-top:10px">
+        <button class="forte" id="baixarZip">⬇ ZIP organizado (pastas por tipo)</button>
+        <button id="baixarRel">⬇ Relatório (.md)</button>
+      </div>
+      <p class="aviso" style="margin-top:10px">O ZIP organizado leva <b>cópias</b>: uma pasta para cada tipo, e os repetidos numa pasta "_repetidos (conferir antes de apagar)". Os seus arquivos originais ficam do jeito que estão.</p>
+    </div>
+    <h2>Grupos</h2>
+    <div id="grupos"></div>
+  </div>
+</div>
+
+<script>
+{
+const $ = (i) => document.getElementById(i);
+const fmtB = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + ' MB' : n >= 1e3 ? (n / 1e3).toFixed(0) + ' KB' : n + ' B';
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let itens = [];
+
+// ───── leitura de ZIP pelo índice (igual ao Raio-X) ─────
+const u16 = (d, o) => d.getUint16(o, true), u32 = (d, o) => d.getUint32(o, true), u64 = (d, o) => d.getUint32(o, true) + d.getUint32(o + 4, true) * 4294967296;
+const bytes = async (b, i, f) => new DataView(await b.slice(i, f).arrayBuffer());
+async function indice(blob) {
+  const tam = blob.size, ler = Math.min(tam, 66022), base = tam - ler, d = await bytes(blob, base, tam);
+  let p = -1; for (let i = ler - 22; i >= 0; i--) if (u32(d, i) === 0x06054b50) { p = i; break; }
+  if (p < 0) throw new Error('não parece um ZIP');
+  let n = u16(d, p + 10), cdTam = u32(d, p + 12), cdOff = u32(d, p + 16);
+  if (n === 0xffff || cdTam === 0xffffffff || cdOff === 0xffffffff) { const loc = p - 20; if (loc >= 0 && u32(d, loc) === 0x07064b50) { const o64 = u64(d, loc + 8), z = await bytes(blob, o64, o64 + 56); if (u32(z, 0) === 0x06064b50) { cdTam = u64(z, 40); cdOff = u64(z, 48); } } }
+  const cd = await bytes(blob, cdOff, cdOff + cdTam), dec = new TextDecoder('utf-8'), out = []; let o = 0;
+  while (o + 46 <= cd.byteLength && u32(cd, o) === 0x02014b50) {
+    const met = u16(cd, o + 10); let comp = u32(cd, o + 20), unc = u32(cd, o + 24); const nl = u16(cd, o + 28), el = u16(cd, o + 30), cl = u16(cd, o + 32); let loff = u32(cd, o + 42);
+    const nome = dec.decode(new Uint8Array(cd.buffer, cd.byteOffset + o + 46, nl)); let e = o + 46 + nl; const eF = e + el;
+    while (e + 4 <= eF) { const id = u16(cd, e), sz = u16(cd, e + 2); if (id === 1) { let q = e + 4; if (unc === 0xffffffff) { unc = u64(cd, q); q += 8; } if (comp === 0xffffffff) { comp = u64(cd, q); q += 8; } if (loff === 0xffffffff) loff = u64(cd, q); } e += 4 + sz; }
+    out.push({ nome, met, comp, unc, loff, pasta: nome.endsWith('/') }); o = eF + cl;
+  }
+  return out;
+}
+async function dadosDe(blob, ent) {
+  const h = await bytes(blob, ent.loff, ent.loff + 30), ini = ent.loff + 30 + u16(h, 26) + u16(h, 28), bruto = blob.slice(ini, ini + ent.comp);
+  if (ent.met === 0) return bruto;
+  if (ent.met === 8) return await new Response(bruto.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+  throw new Error('compressão não suportada');
+}
+function texto(buf) {
+  let b = new Uint8Array(buf);
+  if (b[0] === 0xef && b[1] === 0xbb && b[2] === 0xbf) b = b.subarray(3);
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (e) { return new TextDecoder('windows-1252').decode(b); }
+}
+
+// ───── o que é código ─────
+const CODIGO = /\.(html?|js|mjs|cjs|jsx|ts|tsx|mts|py|md|json|css|vue|svelte|sh|bat|ps1|kt|java|sql|txt)$/i;
+const PESADAS = /(^|\/)(node_modules|\.git|\.cache|dist|build|\.next|__pycache__|\.gradle|\.expo|\.upm|\.local)(\/|$)/;
+const SEGREDO = /(^|\/)(\.env(\.[a-z]+)?|local\.config\.json|secrets?\.json|credentials?\.json|.*\.pem|.*\.key)$/i;
+const MAX = 3e6;
+
+const TIPOS = [
+  ['⚖️ Jurídico', /processo|peti[cç][aã]o|senten[cç]a|ac[oó]rd[aã]o|jur[ií]dic|oab|tribunal|\bcnj\b|\bpje\b|djen|inss|previdenci/gi],
+  ['💬 Chat e IA', /gemini|openai|groq|ollama|openrouter|monica|anthropic|chat|prompt|mensage|completions/gi],
+  ['🧮 Cálculo', /juros|corre[cç][aã]o monet|[ií]ndice|\binpc\b|\bipca\b|calcul|honor[aá]rio|bacen|selic/gi],
+  ['🔄 Conversor e Montador', /regex|convers|convert|montador|\bcsv\b|planilha|xlsx|tabela|regra/gi],
+  ['🎤 Voz', /speechSynthesis|SpeechRecognition|\btts\b|\bvoz\b|microfone|edge-tts|msedge/gi],
+  ['🧹 Limpeza e Backup', /backup|restaur|limpe|faxina|quarentena|\bzip\b/gi],
+  ['🧑‍💻 Editor de código', /editor|monaco|codemirror|github|syntax|terminal|repositori/gi],
+  ['☁️ Banco e Nuvem', /supabase|\bneon\b|firebase|indexeddb|postgres|drizzle|sqlite/gi],
+  ['📱 PWA e APK', /serviceWorker|manifest\.json|capacitor|\bapk\b|electron/gi],
+];
+function tipoDe(t) {
+  const pontos = TIPOS.map(([n, re]) => [n, (t.match(re) || []).length]).filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1]);
+  return pontos.length ? pontos.slice(0, 2).map((x) => x[0]) : ['📦 Outros'];
+}
+function tituloDe(nome, t) {
+  let m = t.match(/<title[^>]*>([^<]{2,120})<\/title>/i); if (m) return m[1].trim();
+  m = t.match(/^#\s+(.{2,120})$/m); if (/\.md$/i.test(nome) && m) return m[1].trim();
+  if (/package\.json$/i.test(nome)) { try { const j = JSON.parse(t); if (j.name) return j.name + (j.description ? ' — ' + j.description : ''); } catch (e) {} }
+  m = t.match(/^\s*(?:\/\*+|\/\/|#|<!--)\s*([^\n*]{6,120})/); if (m) return m[1].replace(/[=\-*]{3,}/g, '').trim();
+  return '';
+}
+function funcoesDe(t) {
+  const s = new Set();
+  for (const m of t.matchAll(/function\s+([A-Za-z_$][\w$]{2,})|(?:const|let)\s+([A-Za-z_$][\w$]{2,})\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>|^\s*def\s+([A-Za-z_]\w{2,})/gm)) { s.add(m[1] || m[2] || m[3]); if (s.size >= 14) break; }
+  return [...s];
+}
+// ───── semelhança (MinHash sobre as linhas) ─────
+const fnv = (s, seed = 0x811c9dc5) => { let h = seed >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; };
+const K = 96, A = [], B = []; { let x = 12345; const r = () => (x = (Math.imul(x, 1103515245) + 12345) >>> 0); for (let i = 0; i < K; i++) { A.push(r() | 1); B.push(r()); } }
+function assinatura(t) {
+  const linhas = t.split(/\n/).map((l) => l.trim().toLowerCase().replace(/\s+/g, ' ')).filter((l) => l.length >= 6);
+  const sig = new Uint32Array(K).fill(0xffffffff); const vistos = new Set();
+  for (const l of linhas) { const h = fnv(l); if (vistos.has(h)) continue; vistos.add(h); for (let i = 0; i < K; i++) { const v = (Math.imul(A[i], h) + B[i]) >>> 0; if (v < sig[i]) sig[i] = v; } }
+  return { sig, n: vistos.size };
+}
+const parecido = (a, b) => { if (!a.n || !b.n) return 0; let c = 0; for (let i = 0; i < K; i++) if (a.sig[i] === b.sig[i]) c++; return c / K; };
+
+// ───── ler arquivos ─────
+async function adicionar(nome, buf) {
+  const t = texto(buf); if (!t.trim()) return;
+  const as = assinatura(t);
+  itens.push({ nome, tam: buf.byteLength, titulo: tituloDe(nome, t), tipos: tipoDe(t), fns: funcoesDe(t), hash: fnv(t) + '-' + fnv(t, 0x12345678) + '-' + t.length, as, dados: new Uint8Array(buf) });
+}
+async function lerZip(blob, prefixo, nivel) {
+  const ents = await indice(blob);
+  for (let i = 0; i < ents.length; i++) {
+    const e = ents[i], cam = prefixo + e.nome; if (e.pasta || PESADAS.test(cam) || SEGREDO.test(e.nome)) continue;
+    if (i % 40 === 0) $('msg').textContent = 'Lendo ' + cam.slice(-70) + '…';
+    try {
+      if (/\.zip$/i.test(e.nome) && nivel < 2 && e.unc < 300e6) { await lerZip(await dadosDe(blob, e), cam + ' › ', nivel + 1); continue; }
+      if (CODIGO.test(e.nome) && e.unc > 0 && e.unc <= MAX) await adicionar(cam, await (await dadosDe(blob, e)).arrayBuffer());
+    } catch (er) { console.warn(cam, er); }
+  }
+}
+$('arqs').onchange = async (ev) => {
+  const fs = [...ev.target.files]; ev.target.value = '';
+  for (let i = 0; i < fs.length; i++) {
+    const f = fs[i]; $('bar').style.width = Math.round(i / fs.length * 100) + '%'; $('msg').textContent = 'Lendo ' + f.name + '…';
+    try {
+      if (/\.zip$/i.test(f.name)) await lerZip(f, f.name + ' › ', 0);
+      else if (CODIGO.test(f.name) && f.size <= MAX && !SEGREDO.test(f.name)) await adicionar(f.name, await f.arrayBuffer());
+    } catch (er) { $('msg').textContent = '⚠ ' + f.name + ': ' + er.message; }
+  }
+  $('bar').style.width = '100%'; analisar();
+};
+$('lim').oninput = () => { $('limTxt').textContent = $('lim').value + '%'; if (itens.length) analisar(); };
+$('limpar').onclick = () => { itens = []; $('saida').hidden = true; $('bar').style.width = '0'; $('msg').textContent = 'Nenhum arquivo ainda.'; };
+
+// ───── agrupar ─────
+let grupos = [];
+function analisar() {
+  const lim = +$('lim').value / 100, n = itens.length, pai = [...Array(n).keys()];
+  const raiz = (x) => (pai[x] === x ? x : (pai[x] = raiz(pai[x])));
+  for (const it of itens) { it.iguais = []; it.parecidos = []; }
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    const a = itens[i], b = itens[j];
+    if (a.hash === b.hash) { a.iguais.push(j); b.iguais.push(i); pai[raiz(j)] = raiz(i); continue; }
+    const s = parecido(a.as, b.as);
+    if (s >= lim) { a.parecidos.push([j, s]); b.parecidos.push([i, s]); pai[raiz(j)] = raiz(i); }
+  }
+  const mapa = new Map(); for (let i = 0; i < n; i++) { const r = raiz(i); if (!mapa.has(r)) mapa.set(r, []); mapa.get(r).push(i); }
+  grupos = [...mapa.values()].sort((a, b) => b.length - a.length);
+  // em cada grupo: o maior fica como "principal"; cópias idênticas a ele viram "repetido"
+  for (const g of grupos) {
+    g.sort((a, b) => itens[b].tam - itens[a].tam);
+    const vistos = new Set();
+    for (const i of g) { const it = itens[i]; it.repetido = vistos.has(it.hash); vistos.add(it.hash); }
+  }
+  pintar();
+}
+function pintar() {
+  const n = itens.length, rep = itens.filter((x) => x.repetido).length, juntos = grupos.filter((g) => g.length > 1).length;
+  $('resumo').innerHTML = '<b>' + n + '</b> códigos lidos · <b>' + juntos + '</b> grupos de parecidos · <b>' + rep + '</b> cópias idênticas (repetidos) · ' + (grupos.length - juntos) + ' sozinhos';
+  $('msg').textContent = '✅ Pronto. Toque num grupo para abrir.';
+  $('grupos').innerHTML = grupos.map((g, gi) => {
+    const tipo = itens[g[0]].tipos[0], tit = itens[g[0]].titulo || itens[g[0]].nome.split(/[\/›]/).pop().trim();
+    return '<details class="grupo"' + (gi < 3 && g.length > 1 ? ' open' : '') + '><summary>' + (g.length > 1 ? '🔗 ' + g.length + ' parecidos' : '• sozinho') + ' — ' + esc(tipo) + ' · ' + esc(tit.slice(0, 70)) + '</summary>' +
+      g.map((i) => {
+        const it = itens[i], prin = itens[g[0]], s = i === g[0] ? null : (it.hash === prin.hash ? 1 : parecido(it.as, prin.as));
+        return '<div class="arq"><b>' + esc(it.nome) + '</b><br>' + (it.titulo ? '<small>“' + esc(it.titulo.slice(0, 110)) + '”</small><br>' : '') +
+          it.tipos.map((t) => '<span class="tag">' + esc(t) + '</span>').join('') + '<span class="tag">' + fmtB(it.tam) + '</span>' +
+          (i === g[0] && g.length > 1 ? '<span class="tag">⭐ maior do grupo</span>' : '') +
+          (s != null ? '<span class="tag' + (it.repetido ? ' rep' : '') + '">' + (it.repetido ? '♻ idêntico (repetido)' : Math.round(s * 100) + '% parecido com o maior') + '</span>' : '') +
+          (it.fns.length ? '<div class="fn">funções: ' + esc(it.fns.join(', ')) + '</div>' : '') + '</div>';
+      }).join('') + '</details>';
+  }).join('');
+  $('saida').hidden = false;
+}
+
+// ───── baixar ─────
+function relatorio() {
+  let r = '# 🗂 Organizador de Códigos — relatório\n\n' + itens.length + ' códigos · semelhança mínima ' + $('lim').value + '%\n\n';
+  grupos.forEach((g, gi) => {
+    r += '## Grupo ' + (gi + 1) + (g.length > 1 ? ' — ' + g.length + ' parecidos' : ' — sozinho') + ' (' + itens[g[0]].tipos.join(', ') + ')\n';
+    for (const i of g) { const it = itens[i], s = i === g[0] ? '⭐ maior' : it.repetido ? '♻ repetido' : Math.round(parecido(it.as, itens[g[0]].as) * 100) + '% parecido'; r += '- ' + it.nome + ' · ' + fmtB(it.tam) + ' · ' + s + (it.titulo ? ' · “' + it.titulo.slice(0, 90) + '”' : '') + (it.fns.length ? '\n  funções: ' + it.fns.join(', ') : '') + '\n'; }
+    r += '\n';
+  });
+  return r;
+}
+function baixar(blob, nome) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
+$('baixarRel').onclick = () => baixar(new Blob([relatorio()], { type: 'text/markdown;charset=utf-8' }), 'organizador-codigos-relatorio.md');
+
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = (u) => { let c = 0xffffffff; for (let i = 0; i < u.length; i++) c = CRC[(c ^ u[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+async function zipar(arqs) {
+  const enc = new TextEncoder(), partes = [], central = []; let off = 0;
+  for (const f of arqs) {
+    const dados = typeof f.dados === 'string' ? enc.encode(f.dados) : f.dados, nome = enc.encode(f.nome), crc = crc32(dados);
+    const comp = new Uint8Array(await new Response(new Blob([dados]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+    const lh = new DataView(new ArrayBuffer(30)); [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x800, 2], [8, 8, 2], [10, 0, 2], [12, 0x21, 2], [14, crc, 4], [18, comp.length, 4], [22, dados.length, 4], [26, nome.length, 2], [28, 0, 2]].forEach(([o, v, s]) => s === 4 ? lh.setUint32(o, v, true) : lh.setUint16(o, v, true));
+    partes.push(new Uint8Array(lh.buffer), nome, comp);
+    const ch = new DataView(new ArrayBuffer(46)); [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x800, 2], [10, 8, 2], [12, 0, 2], [14, 0x21, 2], [16, crc, 4], [20, comp.length, 4], [24, dados.length, 4], [28, nome.length, 2], [30, 0, 2], [32, 0, 2], [34, 0, 2], [36, 0, 2], [38, 0, 4], [42, off, 4]].forEach(([o, v, s]) => s === 4 ? ch.setUint32(o, v, true) : ch.setUint16(o, v, true));
+    central.push(new Uint8Array(ch.buffer), nome); off += 30 + nome.length + comp.length;
+  }
+  const cdTam = central.reduce((a, b) => a + b.length, 0), fim = new DataView(new ArrayBuffer(22));
+  [[0, 0x06054b50, 4], [8, arqs.length, 2], [10, arqs.length, 2], [12, cdTam, 4], [16, off, 4]].forEach(([o, v, s]) => s === 4 ? fim.setUint32(o, v, true) : fim.setUint16(o, v, true));
+  return new Blob(partes.concat(central, [new Uint8Array(fim.buffer)]), { type: 'application/zip' });
+}
+const limpo = (s) => s.replace(/[\\:*?"<>|]/g, '_').replace(/\s*›\s*/g, '/').replace(/^\/+/, '');
+$('baixarZip').onclick = async () => {
+  $('msg').textContent = 'Montando o ZIP organizado…';
+  const arqs = [], usados = new Set();
+  grupos.forEach((g, gi) => {
+    for (const i of g) {
+      const it = itens[i], tipo = it.tipos[0].replace(/^[^\p{L}]+/u, '').trim();
+      const pasta = it.repetido ? '_repetidos (conferir antes de apagar)' : tipo + (g.length > 1 ? '/grupo ' + String(gi + 1).padStart(2, '0') : '');
+      let nome = pasta + '/' + limpo(it.nome).split('/').pop(); let k = 2; while (usados.has(nome)) nome = nome.replace(/(\.[^.\/]+)?$/, (m) => ' (' + k++ + ')' + m);
+      usados.add(nome); arqs.push({ nome, dados: it.dados });
+    }
+  });
+  arqs.push({ nome: 'LEIA-ME — relatório.md', dados: relatorio() });
+  baixar(await zipar(arqs), 'codigos-organizados.zip'); $('msg').textContent = '✅ ZIP baixado.';
+};
+}
+</script>
+</body></html>

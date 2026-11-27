@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>Navegador SK</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icones/icone.svg">
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+<header class="barra">
+  <div class="linha1">
+    <button class="bt" id="voltar" title="Voltar">←</button>
+    <button class="bt" id="avancar" title="Avançar">→</button>
+    <input id="url" type="text" inputmode="url" autocomplete="off" placeholder="Endereço ou pesquisa">
+    <button class="bt forte" id="ir">Ir</button>
+    <button class="bt" id="menu-bt" title="Mais">⋮</button>
+  </div>
+  <div class="linha2">
+    <button class="modo on" data-modo="pagina">🌐 Página</button>
+    <button class="modo" data-modo="leitura">📖 Leitura</button>
+    <label class="tradu"><input type="checkbox" id="traduzir"> 🇧🇷 Traduzir</label>
+    <span id="estado" class="estado"></span>
+  </div>
+  <div class="favs" id="favs"></div>
+</header>
+<div id="progresso"><i></i></div>
+<main id="area">
+  <iframe id="quadro" title="Página" sandbox="allow-scripts allow-forms allow-popups"></iframe>
+  <article id="leitura" hidden></article>
+  <div id="vazio" class="vazio">
+    <h2>🌐 Navegador SK</h2>
+    <p>Digite um endereço ou uma pesquisa e toque em <b>Ir</b>.</p>
+    <ul>
+      <li><b>🌐 Página:</b> mostra o site aqui dentro.</li>
+      <li><b>📖 Leitura:</b> só o texto, limpinho, bom para ler e salvar.</li>
+      <li><b>🇧🇷 Traduzir:</b> passa o site em inglês para o português.</li>
+    </ul>
+    <p class="pequeno" id="vazio-modo"></p>
+  </div>
+</main>
+<div id="painel" hidden>
+  <div class="painel-caixa">
+    <div class="painel-cab"><b>⋮ Mais</b><button class="bt" id="painel-fechar">✖</button></div>
+    <button class="item" id="p-fav">⭐ Salvar nos favoritos</button>
+    <button class="item" id="p-guardar">📌 Guardar esta página no aparelho</button>
+    <button class="item" id="p-guardadas">🗂️ Páginas guardadas</button>
+    <button class="item" id="p-historico">🕐 Histórico</button>
+    <button class="item" id="p-baixar-txt">⬇ Baixar o texto (.txt)</button>
+    <button class="item" id="p-baixar-html">⬇ Baixar a página (.html)</button>
+    <button class="item" id="p-copiar">📋 Copiar o texto</button>
+    <button class="item" id="p-fora">↗ Abrir no Chrome</button>
+    <button class="item" id="p-direto">🪟 Abrir direto (sem passar pelo app)</button>
+    <label class="item"><input type="checkbox" id="p-scripts"> Rodar os scripts do site (alguns sites precisam; pode travar)</label>
+    <div id="lista" class="lista"></div>
+  </div>
+</div>
+<div id="aviso"></div>
+<script src="js/00-base.js"></script>
+<script src="js/10-busca.js"></script>
+<script src="js/20-traducao.js"></script>
+<script src="js/30-leitura.js"></script>
+<script src="js/40-pagina.js"></script>
+<script src="js/50-guardar.js"></script>
+<script src="js/90-inicio.js"></script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14161c">
+<title>Estúdio de Histórias</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icones/icone.svg">
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+<header class="topo">
+  <div class="marca">🎬 <b>Estúdio de Histórias</b></div>
+  <div class="proj">
+    <select id="projeto" aria-label="Projeto"></select>
+    <button class="bt" id="bt-novo" title="Novo projeto">➕</button>
+  </div>
+</header>
+
+<main>
+  <!-- 1) CASO -->
+  <section class="aba" id="aba-caso">
+    <h2>📝 Conte o caso</h2>
+    <p class="dica">Conte a situação do seu jeito, falando ou escrevendo. Pode ser bagunçado. <b>O que você conta aqui não vai para o vídeo:</b> é só para a IA entender a história. Ela cria o roteiro, e a voz que você escolher narra o vídeo.</p>
+    <input class="campo" id="titulo" placeholder="Nome do projeto (ex.: O INSS que negou a aposentadoria)">
+    <div class="linha">
+      <button class="bt forte" id="bt-falar">🎤 Falar</button>
+      <span class="pequeno" id="falar-status"></span>
+    </div>
+    <textarea class="campo grande" id="relato" placeholder="Ex.: Atendi uma senhora de 62 anos que trabalhou na roça a vida toda..."></textarea>
+    <div class="grade">
+      <label>Onde vai postar
+        <select class="campo" id="plataforma">
+          <option value="youtube">▶️ YouTube (vídeo normal)</option>
+          <option value="shorts">📱 YouTube Shorts</option>
+          <option value="reels">📸 Instagram Reels</option>
+          <option value="tiktok">🎵 TikTok</option>
+        </select>
+      </label>
+      <label>Ângulo (o "jeito" da história)
+        <select class="campo" id="angulo">
+          <option value="emocionante">❤️ Emocionante</option>
+          <option value="misterio">🕵️ Mistério / suspense</option>
+          <option value="indignacao">😤 Injustiça / indignação</option>
+          <option value="educativo">🧑‍🏫 Educativo (ensina um direito)</option>
+          <option value="motivacional">💪 Motivacional</option>
+          <option value="humor">😄 Leve, com humor</option>
+        </select>
+      </label>
+      <label>Tipo de conteúdo
+        <select class="campo" id="estilo">
+          <option value="historia">📖 História emocionante</option>
+          <option value="explicacao">🧑‍🏫 Explicação simples do direito</option>
+          <option value="curiosidade">💡 Curiosidade jurídica</option>
+          <option value="vida">🌱 História da minha vida</option>
+        </select>
+      </label>
+      <label>Tamanho
+        <select class="campo" id="duracao">
+          <option value="curto">Curto (≈1 min · Shorts)</option>
+          <option value="medio" selected>Médio (≈3 min)</option>
+          <option value="longo">Longo (≈6 min)</option>
+        </select>
+      </label>
+      <label>Formato do vídeo
+        <select class="campo" id="formato">
+          <option value="vertical">📱 Em pé (Shorts, Reels, TikTok)</option>
+          <option value="horizontal">🖥️ Deitado (YouTube normal)</option>
+        </select>
+      </label>
+    </div>
+    <label class="marcar"><input type="checkbox" id="sigilo" checked> 🔒 Trocar nomes, cidades e detalhes que identifiquem o cliente (sigilo profissional)</label>
+    <button class="bt forte largo" id="bt-tudo">⚡ Fazer tudo sozinho (roteiro, voz, imagens, música e vídeo)</button>
+    <button class="bt largo" id="bt-roteiro">🪄 Só o roteiro (eu faço o resto)</button>
+    <div class="pequeno" id="roteiro-status"></div>
+  </section>
+
+  <!-- 2) ROTEIRO -->
+  <section class="aba" id="aba-roteiro" hidden>
+    <h2>🎬 Roteiro</h2>
+    <p class="dica"><b>*palavra*</b> = falar com ênfase · <b>…</b> = pausa. Cada cena tem a sua imagem, o clima da música e o tom da voz. Pode mudar qualquer coisa.</p>
+    <div id="cenas"></div>
+    <div class="linha">
+      <button class="bt" id="bt-cena-nova">➕ Cena</button>
+      <button class="bt" id="bt-copiar-roteiro">📋 Copiar roteiro</button>
+      <button class="bt" id="bt-baixar-roteiro">⬇ Roteiro em .txt</button>
+    </div>
+  </section>
+
+  <!-- 3) VOZ -->
+  <section class="aba" id="aba-voz" hidden>
+    <h2>🎙️ Voz</h2>
+    <p class="dica">Grave cada cena com a <b>sua voz</b>, lendo do teleprompter. Ou traga o áudio pronto (da sua voz clonada, por exemplo) em 📂.</p>
+    <div id="voz-lista"></div>
+  </section>
+
+  <!-- 4) IMAGENS -->
+  <section class="aba" id="aba-img" hidden>
+    <h2>🖼️ Imagens</h2>
+    <p class="dica">Crie as imagens com IA (adaptadas ao caso de cada cena), ou ache em 🔎 bancos de imagens grátis e escolha em 📂. Sem imagem, a cena usa um fundo escuro.</p>
+    <div id="img-lista"></div>
+  </section>
+
+  <!-- 5) VÍDEO -->
+  <section class="aba" id="aba-video" hidden>
+    <h2>🎞️ Montar o vídeo</h2>
+    <div id="video-resumo" class="caixa"></div>
+    <div class="grade">
+      <label class="marcar"><input type="checkbox" id="legenda" checked> Legenda na tela</label>
+      <label class="marcar"><input type="checkbox" id="zoom" checked> Movimento suave nas imagens</label>
+    </div>
+    <label class="pequeno">🎵 Música de fundo</label>
+    <select class="campo" id="musica-clima"></select>
+    <div class="linha">
+      <button class="bt" id="musica-ouvir">▶ Ouvir 10 segundos</button>
+      <button class="bt" id="bt-musica" hidden>📂 Escolher a música</button>
+      <span class="pequeno" id="musica-nome"></span>
+      <input type="file" id="musica-arq" accept="audio/*" hidden>
+    </div>
+    <button class="bt forte largo" id="bt-montar">🎬 Montar o vídeo</button>
+    <p class="pequeno">O vídeo é montado em tempo real: um vídeo de 3 minutos leva 3 minutos. Deixe a tela ligada e o app aberto.</p>
+    <canvas id="tela"></canvas>
+    <div id="video-pronto"></div>
+  </section>
+
+  <!-- 6) CONFIG -->
+  <section class="aba" id="aba-config" hidden>
+    <h2>⚙️ Configuração</h2>
+    <div class="caixa">
+      <h3>🤖 IA que faz o roteiro</h3>
+      <select class="campo" id="ia-prov">
+        <option value="gemini">Gemini (Google) — tem cota grátis</option>
+        <option value="groq">Groq — tem cota grátis</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="monica">Monica</option>
+        <option value="ollama">Ollama (no PC ou no Termux, sem internet)</option>
+        <option value="compat">Outra (compatível com OpenAI)</option>
+      </select>
+      <input class="campo" id="ia-url" placeholder="Endereço (só para 'Outra'), ex.: https://api.deepseek.com/v1" hidden>
+      <input class="campo" id="ia-chave" type="password" placeholder="Cole a chave aqui" autocomplete="off">
+      <input class="campo" id="ia-modelo" placeholder="Modelo (deixe vazio para o padrão)">
+      <div class="linha"><button class="bt forte" id="ia-salvar">💾 Salvar</button><button class="bt" id="ia-testar">🧪 Testar</button><span class="pequeno" id="ia-msg"></span></div>
+      <label class="marcar"><input type="checkbox" id="ia-proxy"> 🔀 Proxy grátis se o navegador bloquear (Monica…). ⚠️ A chave passa pelo corsproxy.io: use para testar e depois troque a chave. No programa do PC não precisa.</label>
+      <p class="pequeno">A chave fica só neste aparelho.</p>
+    </div>
+    <div class="caixa">
+      <h3>🎨 Cores do app</h3>
+      <select class="campo" id="tema">
+        <option value="">🌙 Escuro (normal)</option>
+        <option value="claro">☀️ Claro</option>
+        <option value="cinza">🌫️ Cinza suave</option>
+      </select>
+    </div>
+    <div class="caixa">
+      <h3>🗣️ Sua voz clonada</h3>
+      <p>Para usar a sua voz clonada:</p>
+      <ol>
+        <li>Na aba 🎬 Roteiro, toque em <b>⬇ Roteiro em .txt</b>: vem uma cena por parágrafo, numerada.</li>
+        <li>Gere o áudio de cada cena no programa da clonagem.</li>
+        <li>Na aba 🎙️ Voz, toque em <b>📂</b> na cena e escolha o áudio.</li>
+      </ol>
+      <p class="pequeno">Gravar com a sua própria voz no 🎙️ também funciona, sem clonar nada.</p>
+    </div>
+    <div class="caixa">
+      <h3>🗂️ Projeto</h3>
+      <div class="linha"><button class="bt" id="bt-apagar-proj">🗑 Apagar este projeto</button></div>
+      <p class="pequeno" id="espaco"></p>
+    </div>
+  </section>
+</main>
+
+<nav class="abas">
+  <button data-aba="caso" class="on">📝<span>Caso</span></button>
+  <button data-aba="roteiro">🎬<span>Roteiro</span></button>
+  <button data-aba="voz">🎙️<span>Voz</span></button>
+  <button data-aba="img">🖼️<span>Imagens</span></button>
+  <button data-aba="video">🎞️<span>Vídeo</span></button>
+  <button data-aba="config">⚙️<span>Config</span></button>
+</nav>
+<div id="aviso"></div>
+
+<script src="js/00-base.js"></script>
+<script src="js/10-ia.js"></script>
+<script src="js/20-caso.js"></script>
+<script src="js/30-roteiro.js"></script>
+<script src="js/42-som.js"></script>
+<script src="js/44-voz-ia.js"></script>
+<script src="js/40-voz.js"></script>
+<script src="js/46-musica.js"></script>
+<script src="js/52-imagens-ia.js"></script>
+<script src="js/50-imagens.js"></script>
+<script src="js/60-video.js"></script>
+<script src="js/70-config.js"></script>
+<script src="js/90-inicio.js"></script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Testar chave de IA</title>
+<style>
+:root{color-scheme:light dark;--bg:light-dark(#f6f7f9,#11161c);--card:light-dark(#fff,#1a222b);--ink:light-dark(#15202b,#e3eaf1);--mut:light-dark(#5b6875,#9aabba);--acc:light-dark(#0b6e6e,#5fd1c4);--lin:light-dark(#d8dde2,#2c3a47);--ok:light-dark(#11733a,#6ee7a0);--ruim:light-dark(#b42318,#ff9b8f)}
+*{box-sizing:border-box;min-width:0}html,body{overscroll-behavior:none}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:14px}
+h1{font-size:24px;margin:0 0 4px}.mut{color:var(--mut)}
+.cx{background:var(--card);border:1px solid var(--lin);border-radius:12px;padding:14px;margin:12px 0}
+label{display:block;font-size:14px;margin:10px 0 4px;color:var(--mut)}
+input,select{width:100%;min-height:44px;font:15px system-ui;padding:0 10px;border:1px solid var(--lin);border-radius:8px;background:var(--bg);color:var(--ink)}
+button{min-height:46px;padding:0 16px;border-radius:8px;border:0;background:var(--acc);color:var(--bg);font:600 15px system-ui;cursor:pointer;margin-top:12px}
+ol#passos{padding-left:20px}ol#passos li{margin:8px 0}
+.ok{color:var(--ok)}.ruim{color:var(--ruim)}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px ui-monospace,monospace;background:var(--bg);border:1px solid var(--lin);border-radius:8px;padding:8px}
+</style></head><body>
+<div class="wrap">
+  <h1>🔌 Testar chave de IA</h1>
+  <p class="mut">Descobre <b>por que uma chave não funciona</b> (Monica, Gemini, Groq, OpenRouter, Perplexity, DeepSeek, OpenAI ou "outra"). Faz 3 testes e diz o motivo em português. A chave <b>não é guardada</b>: só é usada neste teste.</p>
+  <div class="cx">
+    <label for="prov">Qual IA</label>
+    <select id="prov">
+      <option value="monica">Monica (openapi.monica.im)</option>
+      <option value="gemini">Gemini (Google AI Studio)</option>
+      <option value="groq">Groq</option>
+      <option value="openrouter">OpenRouter</option>
+      <option value="perplexity">Perplexity</option>
+      <option value="deepseek">DeepSeek</option>
+      <option value="openai">OpenAI</option>
+      <option value="outra">Outra (endereço próprio)</option>
+    </select>
+    <div id="caixaUrl" hidden><label for="url">Endereço da API (termina em /v1)</label><input id="url" placeholder="https://…/v1"></div>
+    <label for="chave">Chave</label><input id="chave" type="password" autocomplete="off" placeholder="cole a chave aqui">
+    <label for="modelo">Modelo (deixe vazio para eu escolher)</label><input id="modelo" list="modelos" placeholder="ex.: gpt-4o-mini"><datalist id="modelos"></datalist>
+    <label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0;font-weight:400"><input type="checkbox" id="viaProxy" style="width:20px;height:20px;flex:none;margin-top:3px"> <span>🧪 <b>Tentar pelo proxy grátis</b> (corsproxy.io) se o navegador bloquear.<br><span class="mut">⚠️ RISCO: a chave passa por um serviço de terceiros, que pode copiar. Só use para TESTAR e, depois, <b>gere uma chave nova</b> no painel da IA e apague esta. No APK e no programa do PC isso não é necessário.</span></span></label>
+    <button id="testar">▶ Testar</button>
+  </div>
+  <div class="cx" id="res" hidden><h2 style="margin:0 0 6px;font-size:18px">Resultado</h2><ol id="passos"></ol><button id="copiar" style="background:transparent;color:var(--acc);border:1px solid var(--acc)">📋 Copiar o resultado (sem a chave)</button></div>
+</div>
+<script>
+{
+const $ = (i) => document.getElementById(i);
+const P = {
+  monica: { url: 'https://openapi.monica.im/v1', modelo: 'gpt-4o-mini', sugest: ['gpt-4o-mini', 'gpt-4o', 'claude-3-5-haiku-latest', 'claude-3-5-sonnet-latest', 'gemini-2.0-flash'] },
+  groq: { url: 'https://api.groq.com/openai/v1', modelo: 'llama-3.1-8b-instant', sugest: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'] },
+  openrouter: { url: 'https://openrouter.ai/api/v1', modelo: 'meta-llama/llama-3.3-70b-instruct:free', sugest: ['meta-llama/llama-3.3-70b-instruct:free'] },
+  perplexity: { url: 'https://api.perplexity.ai', modelo: 'sonar', sugest: ['sonar', 'sonar-pro'], semModelos: true },
+  deepseek: { url: 'https://api.deepseek.com/v1', modelo: 'deepseek-chat', sugest: ['deepseek-chat'] },
+  openai: { url: 'https://api.openai.com/v1', modelo: 'gpt-4o-mini', sugest: ['gpt-4o-mini', 'gpt-4o'] },
+  gemini: { gemini: true, modelo: 'gemini-2.0-flash', sugest: ['gemini-2.0-flash', 'gemini-1.5-flash'] },
+  outra: { url: '', modelo: '', sugest: [] },
+};
+const prov = () => P[$('prov').value];
+function pintarProv() { const p = prov(); $('caixaUrl').hidden = $('prov').value !== 'outra'; $('modelos').innerHTML = p.sugest.map((m) => '<option value="' + m + '">').join(''); $('modelo').placeholder = p.modelo ? 'vazio = ' + p.modelo : 'nome do modelo'; }
+$('prov').onchange = pintarProv; pintarProv();
+let relato = [];
+function passo(ok, titulo, detalhe) { const li = document.createElement('li'); li.innerHTML = '<b class="' + (ok === true ? 'ok' : ok === false ? 'ruim' : '') + '">' + (ok === true ? '✅ ' : ok === false ? '❌ ' : 'ℹ️ ') + titulo + '</b>' + (detalhe ? '<br><span class="mut">' + detalhe + '</span>' : ''); $('passos').appendChild(li); relato.push((ok === true ? '✅ ' : ok === false ? '❌ ' : 'ℹ️ ') + titulo + (detalhe ? ' — ' + detalhe.replace(/<[^>]+>/g, '') : '')); }
+function motivo(status, corpo) {
+  const t = String(corpo || '').toLowerCase();
+  if (status === 401 || /invalid.*(key|token)|unauthori|incorrect api key/.test(t)) return 'A chave está ERRADA ou não é desta IA. Na Monica: a chave tem que ser da API (platform.monica.im → API Keys), não a do app/extensão.';
+  if (status === 402 || /insufficient|balance|credit|quota|billing|payment/.test(t)) return 'A chave está certa, mas SEM CRÉDITO/SALDO na API (o crédito do app não vale para a API). Confira o saldo no painel da API.';
+  if (status === 403) return 'A chave não tem PERMISSÃO para isso (ou a conta está bloqueada/não verificada).';
+  if (status === 404 || /model.*(not|no).*(found|exist)|unknown model|invalid model/.test(t)) return 'O MODELO não existe nessa IA. Troque o nome do modelo (veja a lista do teste 2).';
+  if (status === 429 || /rate limit/.test(t)) return 'Muitos pedidos ou limite atingido. Espere 1 minuto e teste de novo.';
+  if (status >= 500) return 'A IA está com problema agora (erro do lado dela). Tente mais tarde.';
+  return 'Veja a mensagem da IA abaixo.';
+}
+let viaPonte = false, viaProxy = false;
+async function chamar(url, op) {
+  try { const r = await fetch(url, op); const txt = await r.text(); return { status: r.status, ok: r.ok, txt }; }
+  catch (e) {
+    // no programa do PC: tenta pela ponte /proxy/ia (o PC não tem o bloqueio do navegador)
+    if (location.hostname === '127.0.0.1' && !/generativelanguage/.test(url)) {
+      try { const r = await fetch('/proxy/ia', Object.assign({}, op, { method: (op && op.method) || 'GET', headers: Object.assign({}, (op && op.headers) || {}, { 'x-destino': url }) })); if (r.status !== 404) { viaPonte = true; const txt = await r.text(); return { status: r.status, ok: r.ok, txt }; } } catch (e2) {}
+    }
+    // teste com o proxy grátis (só se a pessoa marcou, sabendo do risco)
+    if ($('viaProxy').checked && !/generativelanguage/.test(url)) {
+      try { const r = await fetch('https://corsproxy.io/?' + encodeURIComponent(url), op); viaProxy = true; const txt = await r.text(); return { status: r.status, ok: r.ok, txt }; } catch (e3) {}
+    }
+    return { erroRede: true, msg: e.message };
+  }
+}
+$('testar').onclick = async () => {
+  viaPonte = false; viaProxy = false;
+  $('res').hidden = false; $('passos').innerHTML = ''; relato = ['Teste de chave — ' + $('prov').selectedOptions[0].text + ' — ' + new Date().toLocaleString('pt-BR')];
+  const p = prov(), bruta = $('chave').value, chave = bruta.trim(); const modelo = $('modelo').value.trim() || p.modelo;
+  const base = ($('prov').value === 'outra' ? $('url').value.trim() : p.url || '').replace(/\/+$/, '');
+  // 1) a chave
+  if (!chave) return passo(false, 'Cole a chave primeiro.');
+  const prob = []; if (bruta !== chave) prob.push('tinha espaço/enter no começo ou no fim (já tirei)'); if (/\s/.test(chave)) prob.push('tem espaço NO MEIO da chave — cole de novo'); if (/["'“”]/.test(chave)) prob.push('tem aspas — tire as aspas');
+  passo(prob.length ? null : true, '1. A chave: ' + chave.length + ' letras, começa com "' + chave.slice(0, 4) + '…"', prob.join('; ') || 'formato ok');
+  if (p.gemini) {
+    const r = await chamar('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(modelo) + ':generateContent?key=' + encodeURIComponent(chave), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: 'Responda só: OK' }] }] }) });
+    if (r.erroRede) return passo(false, '3. Não consegui falar com o Gemini', 'sem internet ou bloqueado: ' + r.msg);
+    if (r.ok) { let t = ''; try { t = JSON.parse(r.txt).candidates[0].content.parts[0].text; } catch (e) {} return passo(true, '3. FUNCIONOU! O Gemini respondeu: "' + String(t).trim().slice(0, 60) + '"', 'Use esta chave e o modelo ' + modelo + '.'); }
+    return passo(false, '3. O Gemini recusou (código ' + r.status + ')', motivo(r.status, r.txt) + '<pre>' + r.txt.slice(0, 600).replace(/</g, '&lt;') + '</pre>');
+  }
+  if (!base) return passo(false, 'Escreva o endereço da API.');
+  const cab = { Authorization: 'Bearer ' + chave, 'content-type': 'application/json' };
+  // 2) lista de modelos
+  if (!p.semModelos) {
+    const r = await chamar(base + '/models', { headers: cab });
+    if (r.erroRede) passo(false, '2. O NAVEGADOR bloqueou a conversa com ' + base, 'Isso se chama "CORS": essa IA não deixa um app de navegador (HTML) falar direto com ela. <b>É por isso que a chave "não funciona" no app.</b> Solução: usar pelo programa do PC (que fala por ele) ou por um "batente". (' + r.msg + ')');
+    else if (r.ok) { let ids = []; try { ids = (JSON.parse(r.txt).data || []).map((m) => m.id); } catch (e) {} $('modelos').innerHTML = ids.map((m) => '<option value="' + m + '">').join(''); passo(true, '2. A chave ENTROU. Modelos disponíveis: ' + ids.length, ids.slice(0, 40).join(', ') + (ids.length > 40 ? '…' : '')); }
+    else passo(false, '2. Lista de modelos recusada (código ' + r.status + ')', motivo(r.status, r.txt) + '<pre>' + r.txt.slice(0, 500).replace(/</g, '&lt;') + '</pre>');
+  }
+  // 3) uma pergunta de verdade
+  const r = await chamar(base + '/chat/completions', { method: 'POST', headers: cab, body: JSON.stringify({ model: modelo, messages: [{ role: 'user', content: 'Responda só: OK' }], max_tokens: 10 }) });
+  if (r.erroRede) return passo(false, '3. O NAVEGADOR bloqueou a pergunta (CORS)', 'Essa IA não aceita pedidos direto do navegador. A chave pode estar certa — mas no app HTML não vai funcionar. Use no programa do PC.');
+  if (r.ok) { let t = ''; try { t = JSON.parse(r.txt).choices[0].message.content; } catch (e) {} return passo(true, '3. FUNCIONOU! O modelo ' + modelo + ' respondeu: "' + String(t).trim().slice(0, 60) + '"' + (viaPonte ? ' (pela ponte do programa do PC)' : viaProxy ? ' (pelo proxy grátis corsproxy.io)' : ''), 'A chave está boa. No app, use este mesmo endereço (' + base + ') e este modelo.' + (viaPonte ? ' No celular ela fica bloqueada pelo navegador; no programa do PC funciona.' : viaProxy ? ' ⚠️ Funcionou pelo proxy de terceiros: agora GERE UMA CHAVE NOVA no painel da IA e apague esta. Para usar no dia a dia: APK ou programa do PC.' : '')); }
+  passo(false, '3. A pergunta foi recusada (código ' + r.status + ') com o modelo ' + modelo, motivo(r.status, r.txt) + '<pre>' + r.txt.slice(0, 600).replace(/</g, '&lt;') + '</pre>');
+};
+$('copiar').onclick = async () => { try { await navigator.clipboard.writeText(relato.join('\n')); $('copiar').textContent = '📋 Copiado'; } catch (e) {} };
+}
+</script>
+</body></html>

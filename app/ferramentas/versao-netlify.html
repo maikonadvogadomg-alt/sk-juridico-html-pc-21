@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minha versão no Netlify</title>
+<style>
+:root{color-scheme:light dark;--bg:light-dark(#f6f7f9,#11161c);--card:light-dark(#fff,#1a222b);--ink:light-dark(#15202b,#e3eaf1);--mut:light-dark(#5b6875,#9aabba);--acc:light-dark(#0b6e6e,#5fd1c4);--lin:light-dark(#d8dde2,#2c3a47)}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overscroll-behavior:none}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif;display:flex;flex-direction:column}
+.topo{padding:10px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--lin);background:var(--card)}
+input{flex:1 1 220px;min-height:42px;font:15px system-ui;padding:0 10px;border:1px solid var(--lin);border-radius:8px;background:var(--bg);color:var(--ink)}
+button,a.bt{min-height:42px;padding:0 12px;border-radius:8px;border:1px solid var(--acc);background:transparent;color:var(--acc);font:600 14px system-ui;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+button.forte{background:var(--acc);color:var(--bg)}
+.ajuda{padding:16px;max-width:640px}
+.ajuda li{margin:6px 0}
+iframe{flex:1;width:100%;border:0;background:#fff}
+small{color:var(--mut)}
+</style></head><body>
+<div class="topo">
+  <input id="url" type="url" placeholder="https://seu-site.netlify.app" autocomplete="off">
+  <button class="forte" id="abrir">▶ Abrir aqui</button>
+  <a class="bt" id="fora" target="_blank" rel="noopener" href="#">↗ Abrir fora</a>
+  <button id="trocar" hidden>✏️ Trocar link</button>
+</div>
+<div class="ajuda" id="ajuda">
+  <h2>🌐 Minha versão no Netlify</h2>
+  <p>Abre aqui dentro a sua versão jurídica antiga que está publicada no Netlify (a que já funciona). Assim você usa as duas no mesmo lugar.</p>
+  <ol>
+    <li>Copie o endereço do site no Netlify (termina em <b>.netlify.app</b>).</li>
+    <li>Cole no campo acima e toque em <b>▶ Abrir aqui</b>. O link fica guardado neste aparelho.</li>
+    <li>Se aparecer em branco ou "recusou a conexão", toque em <b>↗ Abrir fora</b>: alguns sites não deixam abrir dentro de outro.</li>
+  </ol>
+  <p><small>O login e os dados continuam sendo os da própria versão do Netlify. Nada daqui vai para lá.</small></p>
+</div>
+<iframe id="quadro" hidden allow="clipboard-read; clipboard-write; microphone; camera; fullscreen"></iframe>
+<script>
+(function(){
+  const K='versaoNetlify:url', $=(s)=>document.getElementById(s);
+  const ler=()=>{try{return localStorage.getItem(K)||''}catch(e){return ''}};
+  const gravar=(v)=>{try{localStorage.setItem(K,v)}catch(e){}};
+  function arrumar(v){v=String(v||'').trim();if(!v)return '';if(!/^https?:\/\//i.test(v))v='https://'+v;return v}
+  function abrir(v){
+    v=arrumar(v);if(!v){$('url').focus();return}
+    gravar(v);$('url').value=v;$('fora').href=v;
+    $('quadro').src=v;$('quadro').hidden=false;$('ajuda').hidden=true;
+    $('url').hidden=true;$('abrir').hidden=true;$('trocar').hidden=false;
+  }
+  $('abrir').onclick=()=>abrir($('url').value);
+  $('url').addEventListener('keydown',(e)=>{if(e.key==='Enter')abrir($('url').value)});
+  $('trocar').onclick=()=>{$('url').hidden=false;$('abrir').hidden=false;$('trocar').hidden=true;$('url').focus()};
+  $('fora').onclick=(e)=>{const v=arrumar($('url').value||ler());if(!v){e.preventDefault();$('url').focus()}else $('fora').href=v};
+  const salvo=ler();if(salvo)abrir(salvo);
+})();
+</script>
+</body></html>
